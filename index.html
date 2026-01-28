@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AVL Tree Visualization</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background:
+                radial-gradient(circle at 1px 1px, #dcdcdc 1px, transparent 0),
+                linear-gradient(to bottom, #f7f9fc, #e9edf3);
+            background-size: 20px 20px, 100% 100%;
+        }
+
+        header {
+            text-align: center;
+            padding: 16px;
+            font-size: 26px;
+            font-weight: bold;
+            background: #2c3e50;
+            color: white;
+        }
+
+        #container {
+            height: calc(100vh - 70px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #inputBox {
+            background: white;
+            padding: 25px 35px;
+            border-radius: 8px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+            text-align: center;
+        }
+
+        input {
+            width: 260px;
+            padding: 8px;
+            margin: 6px;
+            font-size: 16px;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 28px;
+            font-size: 16px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        canvas {
+            display: none;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+
+<body>
+
+<header>AVL Tree Visualization</header>
+
+<div id="container">
+
+    <div id="inputBox">
+        <h3>Enter Input</h3>
+        <input id="count" type="number" placeholder="Number of nodes"><br>
+        <input id="values" type="text" placeholder="Values (space separated)"><br>
+        <button onclick="start()">Start</button>
+    </div>
+
+    <canvas id="canvas" width="1000" height="600"></canvas>
+
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+/* 🌈 Draw canvas background */
+function drawCanvasBackground() {
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, "#eef2ff");
+    grad.addColorStop(1, "#dbeafe");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+/* ===== AVL Tree ===== */
+class Node {
+    constructor(val) {
+        this.val = val;
+        this.left = null;
+        this.right = null;
+        this.height = 1;
+        this.x = 0;
+        this.y = 0;
+    }
+}
+
+class AVL {
+    height(n) { return n ? n.height : 0; }
+    balance(n) { return n ? this.height(n.left) - this.height(n.right) : 0; }
+
+    rightRotate(y) {
+        let x = y.left;
+        let t2 = x.right;
+        x.right = y;
+        y.left = t2;
+        y.height = Math.max(this.height(y.left), this.height(y.right)) + 1;
+        x.height = Math.max(this.height(x.left), this.height(x.right)) + 1;
+        return x;
+    }
+
+    leftRotate(x) {
+        let y = x.right;
+        let t2 = y.left;
+        y.left = x;
+        x.right = t2;
+        x.height = Math.max(this.height(x.left), this.height(x.right)) + 1;
+        y.height = Math.max(this.height(y.left), this.height(y.right)) + 1;
+        return y;
+    }
+
+    insert(node, val) {
+        if (!node) return new Node(val);
+
+        if (val < node.val)
+            node.left = this.insert(node.left, val);
+        else if (val > node.val)
+            node.right = this.insert(node.right, val);
+        else
+            return node;
+
+        node.height = 1 + Math.max(this.height(node.left), this.height(node.right));
+        let bf = this.balance(node);
+
+        if (bf > 1 && val < node.left.val) return this.rightRotate(node);
+        if (bf < -1 && val > node.right.val) return this.leftRotate(node);
+        if (bf > 1 && val > node.left.val) {
+            node.left = this.leftRotate(node.left);
+            return this.rightRotate(node);
+        }
+        if (bf < -1 && val < node.right.val) {
+            node.right = this.rightRotate(node.right);
+            return this.leftRotate(node);
+        }
+        return node;
+    }
+}
+
+/* ===== Drawing ===== */
+function setPos(n, x, y, gap) {
+    if (!n) return;
+    n.x = x;
+    n.y = y;
+    setPos(n.left, x - gap, y + 80, gap / 2);
+    setPos(n.right, x + gap, y + 80, gap / 2);
+}
+
+function drawTree(root) {
+    drawCanvasBackground();   // ⭐ IMPORTANT
+    setPos(root, canvas.width / 2, 60, 220);
+    drawEdges(root);
+    drawNodes(root);
+}
+
+function drawEdges(n) {
+    if (!n) return;
+    ctx.strokeStyle = "#1e40af"; // deep blue
+    ctx.lineWidth = 2.5;
+    if (n.left) {
+        ctx.beginPath();
+        ctx.moveTo(n.x, n.y);
+        ctx.lineTo(n.left.x, n.left.y);
+        ctx.stroke();
+    }
+    if (n.right) {
+        ctx.beginPath();
+        ctx.moveTo(n.x, n.y);
+        ctx.lineTo(n.right.x, n.right.y);
+        ctx.stroke();
+    }
+    drawEdges(n.left);
+    drawEdges(n.right);
+}
+
+function drawNodes(n) {
+    if (!n) return;
+    ctx.fillStyle = "#2563eb";   // vibrant blue
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "white";
+    ctx.font = "14px Arial";
+    ctx.fillText(n.val, n.x - 6, n.y + 5);
+    drawNodes(n.left);
+    drawNodes(n.right);
+}
+
+/* ===== Control ===== */
+const avl = new AVL();
+let root = null;
+let valuesArr = [];
+let idx = 0;
+
+function animate() {
+    if (idx >= valuesArr.length) return;
+    root = avl.insert(root, valuesArr[idx++]);
+    drawTree(root);
+    setTimeout(animate, 800);
+}
+
+function start() {
+    const n = parseInt(count.value);
+    valuesArr = document.getElementById("values").value
+        .trim().split(/\s+/).map(Number).filter(v => !isNaN(v));
+
+    if (valuesArr.length !== n) {
+        alert("Input count mismatch");
+        return;
+    }
+
+    document.getElementById("inputBox").style.display = "none";
+    canvas.style.display = "block";
+    root = null;
+    idx = 0;
+    animate();
+}
+</script>
+
+</body>
+</html>
